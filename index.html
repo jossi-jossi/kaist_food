@@ -37,6 +37,26 @@
     <main id="restaurant-list">
         </main>
 
+    <div id="random-btn" onclick="pickRandomShop()" style="position: fixed; bottom: 30px; right: 30px; width: 60px; height: 60px; background: #ff6b6b; color: white; border-radius: 50%; display: flex; align-items: center; justify-content: center; font-size: 1.5rem; cursor: pointer; box-shadow: 0 4px 15px rgba(255,107,107,0.4); z-index: 100;">
+        🎲
+    </div>
+
+    <div id="random-modal" class="modal-overlay">
+        <div class="modal-content" style="text-align: center; padding: 40px 20px;">
+            <div style="font-size: 3rem; margin-bottom: 20px;">🎲</div>
+            <h3 style="color: #888; margin-bottom: 5px; font-size: 0.9rem;">오늘의 추천 식당</h3>
+            <h2 id="random-result-name" style="font-size: 1.8rem; color: #333; margin-bottom: 10px;">---</h2>
+            
+            <div id="random-menu-suggestion" style="background: #fff5f5; padding: 15px; border-radius: 12px; margin-bottom: 20px; min-height: 50px; display: flex; flex-direction: column; align-items: center; justify-content: center;">
+                <span style="font-size: 0.8rem; color: #ff6b6b; font-weight: bold; margin-bottom: 5px;">추천 메뉴</span>
+                <div id="random-menu-text" style="font-weight: bold; color: #444; line-height: 1.4;">---</div>
+            </div>
+
+            <button id="random-go-btn" style="width: 100%; padding: 15px; background: #ff6b6b; color: white; border: none; border-radius: 12px; font-weight: bold; font-size: 1rem; cursor: pointer;">상세 정보 보기</button>
+            <button onclick="closeRandomModal()" style="margin-top: 15px; background: none; border: none; color: #aaa; text-decoration: underline; cursor: pointer;">다시 뽑기</button>
+        </div>
+    </div>
+
     <script src="data.js"></script>
     <script src="script.js"></script>
 
