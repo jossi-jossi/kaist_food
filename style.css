@@ -192,6 +192,21 @@ h2 {
     font-weight: bold;
 }
 
+#random-btn:active {
+    transform: scale(0.9);
+    transition: 0.1s;
+}
+
+@keyframes pulse {
+    0% { transform: scale(1); }
+    50% { transform: scale(1.1); }
+    100% { transform: scale(1); }
+}
+
+#random-btn {
+    animation: pulse 2s infinite; /* 버튼이 살짝씩 커졌다 작아졌다 함 */
+}
+
 #modal-body h2 { margin-bottom: 15px; color: #ff6b6b; }
 .detail-item { margin-bottom: 12px; font-size: 0.95rem; }
 .detail-label { font-weight: bold; color: #333; display: block; margin-bottom: 4px; }
