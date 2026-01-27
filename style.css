@@ -1,0 +1,197 @@
+/* 1. 기본 초기화 및 모바일 설정 */
+* {
+    box-sizing: border-box; /* 패딩이 너비에 영향을 주지 않도록 */
+    -webkit-tap-highlight-color: transparent; /* 터치 시 파란 박스 제거 */
+}
+
+body {
+    font-family: 'Apple SD Gothic Neo', 'Noto Sans KR', sans-serif;
+    margin: 0;
+    padding: 0;
+    background-color: #f2f4f7; /* 약간 더 부드러운 배경색 */
+    color: #1a1a1a;
+    line-height: 1.5;
+}
+
+/* 2. 고정 상단 헤더 */
+header {
+    background-color: #ffffff;
+    padding: 16px;
+    text-align: center;
+    position: sticky;
+    top: 0;
+    z-index: 100;
+    border-bottom: 1px solid #e5e8eb;
+}
+
+header h1 {
+    margin: 0;
+    font-size: 1.25rem;
+    color: #ff6b6b;
+    font-weight: 800;
+}
+
+/* 3. 모바일 리스트 컨테이너 */
+#restaurant-list {
+    padding: 12px;
+    max-width: 500px; /* 모바일 너비 제한 (태블릿/PC 대응) */
+    margin: 0 auto;
+}
+
+/* 4. 카드 디자인 (가장 중요) */
+.card {
+    background: white;
+    border-radius: 16px;
+    padding: 16px;
+    margin-bottom: 12px;
+    box-shadow: 0 2px 8px rgba(0, 0, 0, 0.05);
+    border: 1px solid #ffffff;
+    transition: all 0.2s ease;
+}
+
+/* 터치했을 때 살짝 눌리는 효과 (모바일 전용 피드백) */
+.card:active {
+    transform: scale(0.97);
+    background-color: #fafafa;
+}
+
+.card-header {
+    display: flex;
+    justify-content: space-between;
+    align-items: center;
+    margin-bottom: 8px;
+}
+
+h2 {
+    margin: 4px 0;
+    font-size: 1.15rem;
+    font-weight: 700;
+}
+
+/* 5. 상태 뱃지 및 태그 */
+.status-badge {
+    padding: 4px 10px;
+    border-radius: 8px;
+    font-size: 0.75rem;
+    font-weight: 700;
+}
+
+.status-badge.open { background-color: #e7f9ed; color: #2ecc71; }
+.status-badge.break { background-color: #fff9db; color: #f1c40f; }
+.status-badge.closed { background-color: #fff0f0; color: #ff6b6b; }
+
+.tags {
+    font-size: 0.8rem;
+    color: #8b95a1;
+    word-break: keep-all; /* 단어 단위로 줄바꿈 */
+}
+
+/* 6. 시간 정보 섹션 */
+.time-info {
+    margin-top: 12px;
+    padding-top: 12px;
+    border-top: 1px dashed #f2f4f7;
+}
+
+.time-info p {
+    margin: 0;
+    font-size: 0.85rem;
+    color: #4e5968;
+    display: flex;
+    align-items: center;
+}
+
+/* 아이콘 느낌을 주는 이모지 간격 */
+.time-info p::before {
+    margin-right: 6px;
+}
+
+/* 모달 배경 (어둡게) */
+.modal-overlay {
+    display: none; /* 평소에는 숨김 */
+    position: fixed;
+    top: 0; left: 0;
+    width: 100%; height: 100%;
+    background: rgba(0, 0, 0, 0.6);
+    z-index: 1000;
+    justify-content: center;
+    align-items: center;
+}
+
+/* 모달 박스 */
+.modal-content {
+    background: white;
+    width: 90%;
+    max-width: 400px;
+    border-radius: 20px;
+    padding: 24px;
+    position: relative;
+    animation: slideUp 0.3s ease-out;
+}
+
+@keyframes slideUp {
+    from { transform: translateY(50px); opacity: 0; }
+    to { transform: translateY(0); opacity: 1; }
+}
+
+.close-btn {
+    position: absolute;
+    top: 15px; right: 20px;
+    font-size: 28px;
+    color: #aaa;
+    cursor: pointer;
+}
+
+/* 선택된 필터 버튼 스타일 */
+.filter-btn {
+    padding: 6px 14px;
+    border-radius: 20px;
+    border: 1px solid #eee;
+    background: #f8f9fa;
+    font-size: 0.85rem;
+    white-space: nowrap;
+    cursor: pointer;
+    transition: all 0.2s;
+    color: #666;
+}
+
+.filter-btn.active {
+    background: #ff6b6b;
+    color: white;
+    border-color: #ff6b6b;
+    font-weight: bold;
+}
+
+/* 태그 모달 전용 높이 제한 및 스크롤 */
+.tag-modal-content {
+    max-height: 80vh;
+    overflow-y: auto;
+}
+
+.tag-grid {
+    display: grid;
+    grid-template-columns: repeat(2, 1fr); /* 2열로 정렬 */
+    gap: 10px;
+    margin-top: 20px;
+}
+
+.tag-item-btn {
+    padding: 12px;
+    border-radius: 10px;
+    border: 1px solid #eee;
+    background: #f9f9f9;
+    text-align: center;
+    font-size: 0.9rem;
+    cursor: pointer;
+}
+
+.tag-item-btn.selected {
+    background: #ff6b6b;
+    color: white;
+    border-color: #ff6b6b;
+    font-weight: bold;
+}
+
+#modal-body h2 { margin-bottom: 15px; color: #ff6b6b; }
+.detail-item { margin-bottom: 12px; font-size: 0.95rem; }
+.detail-label { font-weight: bold; color: #333; display: block; margin-bottom: 4px; }

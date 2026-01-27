@@ -1,0 +1,59 @@
+<!DOCTYPE html>
+<html lang="ko">
+<head>
+    <meta charset="UTF-8">
+    <meta name="viewport" content="width=device-width, initial-scale=1.0, maximum-scale=1.0, user-scalable=no">
+    <title>우리 학교 뭐 먹지? | 캠퍼스 맛집</title>
+    <link rel="stylesheet" href="style.css">
+</head>
+<body>
+
+    <header>
+        <h1>CAMPUS EATS 🍽️</h1>
+        <div id="today-info" style="font-size: 0.8rem; color: #888; margin-top: 5px;"></div>
+    </header>
+
+    <div class="filter-action-bar" style="padding: 10px 16px; background: #fff; border-bottom: 1px solid #eee; position: sticky; top: 60px; z-index: 99;">
+        <button id="filter-modal-btn" class="filter-btn active" onclick="openTagModal()" style="display: flex; align-items: center; gap: 5px;">
+            🔍 필터: <span id="current-tag-label">전체</span>
+        </button>
+    </div>
+
+    <div id="tag-modal" class="modal-overlay">
+        <div class="modal-content tag-modal-content">
+            <span class="close-btn" onclick="closeTagModal()">&times;</span>
+            <h3 style="margin-bottom: 5px;">태그 선택</h3>
+            <p style="font-size: 0.8rem; color: #888; margin-bottom: 15px;">여러 개 선택이 가능합니다.</p>
+        
+            <div id="tag-list-container" class="tag-grid">
+                </div>
+
+            <button onclick="applyMultiFilters()" style="width:100%; padding:15px; margin-top:20px; border-radius:12px; border:none; background:#ff6b6b; color:white; font-weight:bold; font-size:1rem;">
+                선택한 태그 적용하기
+            </button>
+        </div>
+    </div>
+
+    <main id="restaurant-list">
+        </main>
+
+    <script src="data.js"></script>
+    <script src="script.js"></script>
+
+    <script>
+        // 현재 날짜와 요일을 상단에 표시해주는 보조 기능
+        const now = new Date();
+        const days = ['일', '월', '화', '수', '목', '금', '토'];
+        document.getElementById('today-info').innerText = 
+            `${now.getMonth() + 1}월 ${now.getDate()}일 (${days[now.getDay()]}) 실시간 영업 정보`;
+    </script>
+
+    <div id="modal" class="modal-overlay">
+        <div class="modal-content">
+            <span class="close-btn" onclick="closeModal()">&times;</span>
+            <div id="modal-body">
+                </div>
+        </div>
+    </div>
+</body>
+</html>
