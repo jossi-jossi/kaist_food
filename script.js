@@ -236,19 +236,80 @@ function closeModal() {
     document.getElementById('modal').style.display = 'none';
 }
 
+// [6] 랜덤 추천 기능 업그레이드
+function pickRandomShop() {
+    // 1. 현재 영업 중이거나 준비 중인 식당만 필터링
+    const availableShops = restaurants.filter(shop => {
+        const status = getStatus(shop);
+        return status.canEat || status.label === "준비 중";
+    });
+
+    if (availableShops.length === 0) {
+        alert("현재 운영 중인 식당이 없네요. 😭");
+        return;
+    }
+
+    // 2. 랜덤 식당 추출
+    const randomIndex = Math.floor(Math.random() * availableShops.length);
+    const selectedShop = availableShops[randomIndex];
+
+    // 3. 메뉴 추출 로직
+    let suggestionText = "";
+    if (selectedShop["식단가기"]) {
+        // 학식의 경우 구체적인 메뉴를 알 수 없으므로 기대감을 주는 문구 출력
+        suggestionText = "🍱 오늘의 맛있는 학식을 확인해보세요!";
+    } else if (selectedShop["메뉴"]) {
+        // [카테고리] 메뉴1, 메뉴2 형태에서 메뉴 이름들만 추출
+        const allItems = selectedShop["메뉴"]
+            .replace(/\[.*?\]/g, "") // [카테고리] 제거
+            .split(",")              // 쉼표로 분리
+            .map(i => i.trim())      // 공백 제거
+            .filter(i => i !== "");  // 빈 값 제거
+
+        if (allItems.length > 0) {
+            // 메뉴 중 무작위로 1~2개 선택
+            const shuffle = allItems.sort(() => 0.5 - Math.random());
+            const picked = shuffle.slice(0, Math.min(2, shuffle.length));
+            suggestionText = `✨ ${picked.join(', ')} 어때요?`;
+        } else {
+            suggestionText = "맛있는 메뉴가 가득해요! 😋";
+        }
+    } else {
+        suggestionText = "어떤 메뉴가 있을지 확인해볼까요? 🧐";
+    }
+
+    // 4. 결과 출력
+    document.getElementById('random-result-name').innerText = selectedShop["식당명"];
+    document.getElementById('random-menu-text').innerText = suggestionText;
+    
+    document.getElementById('random-go-btn').onclick = () => {
+        closeRandomModal();
+        openModal(selectedShop);
+    };
+
+    document.getElementById('random-modal').style.display = 'flex';
+}
+
+function closeRandomModal() {
+    document.getElementById('random-modal').style.display = 'none';
+}
+
+// 윈도우 클릭 이벤트에 랜덤 모달 닫기 추가 (기존 window.onclick 수정)
+window.onclick = (event) => {
+    const modal = document.getElementById('modal');
+    const tagModal = document.getElementById('tag-modal');
+    const randomModal = document.getElementById('random-modal');
+    if (event.target === modal) closeModal();
+    if (event.target === tagModal) closeTagModal();
+    if (event.target === randomModal) closeRandomModal();
+}
+
 function getCurrentDayTimes(shop) {
     const day = new Date().getDay();
     const isWeekend = (day === 0 || day === 6);
     const prefix = isWeekend ? "주말 타임 " : "평일 타임 ";
     const times = [shop[prefix + "1"], shop[prefix + "2"], shop[prefix + "3"]].filter(t => t && t !== "");
     return times.length > 0 ? times.join(', ') : "운영 안 함";
-}
-
-window.onclick = (event) => {
-    const modal = document.getElementById('modal');
-    const tagModal = document.getElementById('tag-modal');
-    if (event.target === modal) closeModal();
-    if (event.target === tagModal) closeTagModal();
 }
 
 // [5] 초기 실행
