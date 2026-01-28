@@ -1,17 +1,61 @@
-// [1] 현재 영업 상태를 판별하는 함수
+// [1] 날짜 설정 (학기별로 한 번씩만 업데이트 하세요)
+const CALENDAR = {
+    // 방학 기간 설정 (시작일 ~ 종료일)
+    vacation: [
+        { start: '2025-12-22', end: '2026-02-28' }, // 겨울 방학
+        { start: '2026-06-22', end: '2026-08-31' }  // 여름 방학
+    ],
+    // 공휴일 리스트 (YYYY-MM-DD)
+    holidays: [
+        '2026-01-01', '2026-02-16', '2026-02-17', '2026-02-18', '2026-03-01', '2026-05-01', '2026-05-05', '2026-05-24', '2026-06-03', '2026-06-06', '2026-08-15', '2026-09-24', '2026-09-25', '2026-09-26', '2026-10-03', '2026-10-09', '2026-12-25'
+    ]
+};
+
+// [2] 현재 날짜가 어떤 시즌인지 판단하는 함수
+function getSeason() {
+    const now = new Date();
+    const dateStr = now.toISOString().split('T')[0];
+
+    // 1순위: 공휴일
+    if (CALENDAR.holidays.includes(dateStr)) return "HOLIDAY";
+
+    // 2순위: 방학
+    const isVacation = CALENDAR.vacation.some(range => dateStr >= range.start && dateStr <= range.end);
+    return isVacation ? "VACATION" : "SEMESTER";
+}
+
+// [3] 현재 영업 상태 판별 (방학/공휴일 반영)
 function getStatus(shop) {
     const now = new Date();
-    const day = now.getDay(); 
-    const dayNames = ['일', '월', '화', '수', '목', '금', '토'];
-    const todayName = dayNames[day];
+    const day = now.getDay(); // 0:일, 1:월 ...
+    const dayName = ['일', '월', '화', '수', '목', '금', '토'][day];
     const isWeekend = (day === 0 || day === 6);
+    const season = getSeason();
 
-    if (shop["휴무 요일"].includes(todayName)) {
+    // A. 공휴일 체크
+    if (season === "HOLIDAY" && shop["공휴일 영업"] === "N") {
+        return { label: "공휴일 휴무", canEat: false, class: "closed" };
+    }
+
+    // B. 휴무 요일 체크 (시즌별 구분)
+    const closedDays = season === "VACATION" ? shop["방학 휴무 요일"] : shop["학기 휴무 요일"];
+    if (closedDays && closedDays.includes(dayName)) {
         return { label: "정기 휴무", canEat: false, class: "closed" };
     }
 
-    const prefix = isWeekend ? "주말 타임 " : "평일 타임 ";
-    const timeRanges = [shop[prefix + "1"], shop[prefix + "2"], shop[prefix + "3"]].filter(t => t && t !== "");
+    // C. 운영 시간 결정 (방학 데이터가 없으면 학기 데이터 사용)
+    let prefix = "";
+    if (season === "VACATION") {
+        prefix = isWeekend ? "방학 주말 타임 " : "방학 평일 타임 ";
+        // 방학 데이터가 완전히 비어있으면 학기 데이터로 대체
+        if (!shop[prefix + "1"] || shop[prefix + "1"] === "") {
+            prefix = isWeekend ? "학기 주말 타임 " : "학기 평일 타임 ";
+        }
+    } else {
+        prefix = isWeekend ? "학기 주말 타임 " : "학기 평일 타임 ";
+    }
+
+    const timeRanges = [shop[prefix + "1"], shop[prefix + "2"], shop[prefix + "3"]].filter(t => t && t !== "" && t !== "운영 안 함");
 
     if (timeRanges.length === 0) {
         return { label: "운영 안 함", canEat: false, class: "closed" };
@@ -138,19 +182,17 @@ function renderList() {
     });
 }
 
-// [4] 상세 정보 모달 (날짜 자동 생성 버튼 포함)
+// [4] 상세 정보 모달 (학기/방학/공휴일 완벽 대응 버전)
 function openModal(shop) {
     const modal = document.getElementById('modal');
     const body = document.getElementById('modal-body');
-    const status = getStatus(shop);
+    const status = getStatus(shop); // 시즌이 반영된 영업 상태
+    const season = getSeason();     // 현재 시즌 (SEMESTER, VACATION, HOLIDAY)
     const isWeekend = ([0, 6].includes(new Date().getDay()));
     
-    // 📅 오늘 날짜를 YYYY-MM-DD 형식으로 생성
+    // 📅 오늘 날짜를 YYYY-MM-DD 형식으로 생성 (식단표 링크용)
     const now = new Date();
-    const year = now.getFullYear();
-    const month = String(now.getMonth() + 1).padStart(2, '0');
-    const date = String(now.getDate()).padStart(2, '0');
-    const todayStr = `${year}-${month}-${date}`;
+    const todayStr = `${now.getFullYear()}-${String(now.getMonth() + 1).padStart(2, '0')}-${String(now.getDate()).padStart(2, '0')}`;
 
     // 🔗 식단표 링크 생성
     let menuLinkHtml = '';
@@ -194,6 +236,24 @@ function openModal(shop) {
         `;
     }
 
+    // 🕒 시즌에 맞는 시간 데이터 선택 (방학 데이터가 없으면 학기 데이터 사용)
+    const isVacationMode = (season === "VACATION");
+    const weekPrefix = isVacationMode ? "방학 평일 타임 " : "학기 평일 타임 ";
+    const weekendPrefix = isVacationMode ? "방학 주말 타임 " : "학기 주말 타임 ";
+    const closedLabel = isVacationMode ? (shop["방학 휴무 요일"] || '연중무휴') : (shop["학기 휴무 요일"] || '연중무휴');
+
+    // 시간 리스트 생성 (비어있을 경우 fallback)
+    const getTimes = (prefix, fallbackPrefix) => {
+        let times = [shop[prefix + "1"], shop[prefix + "2"], shop[prefix + "3"]].filter(t => t && t.trim() !== "");
+        if (times.length === 0 && isVacationMode) {
+            times = [shop[fallbackPrefix + "1"], shop[fallbackPrefix + "2"], shop[fallbackPrefix + "3"]].filter(t => t && t.trim() !== "");
+        }
+        return times.join(' / ') || '운영 안 함';
+    };
+
+    const weekTimes = getTimes(weekPrefix, "학기 평일 타임 ");
+    const weekendTimes = getTimes(weekendPrefix, "학기 주말 타임 ");
+
     body.innerHTML = `
         <div style="text-align: center; margin-bottom: 20px;">
             <div style="margin-bottom: 8px;">
@@ -209,22 +269,26 @@ function openModal(shop) {
         ${menuSectionHtml}
 
         <div style="background: #f8f9fa; padding: 15px; border-radius: 12px; display: grid; gap: 12px;">
+            <div style="font-size: 0.75rem; color: #ff6b6b; font-weight: bold; border-bottom: 1px dashed #ddd; padding-bottom: 5px; margin-bottom: 5px;">
+                📢 현재 운영 모드: ${season === "VACATION" ? "🏖️ 방학 중" : (season === "HOLIDAY" ? "🚩 공휴일" : "📖 학기 중")}
+            </div>
             <div class="detail-item" style="margin: 0;">
                 <span class="detail-label" style="font-size: 0.75rem; color: #888;">🕒 평일 운영시간</span>
-                <div style="font-size: 0.95rem; ${!isWeekend ? 'color:#333; font-weight:bold;' : 'color:#999;'}">
-                    ${[shop["평일 타임 1"], shop["평일 타임 2"], shop["평일 타임 3"]].filter(t => t).join(' / ') || '운영 안 함'}
+                <div style="font-size: 0.95rem; ${(!isWeekend && season !== 'HOLIDAY') ? 'color:#333; font-weight:bold;' : 'color:#999;'}">
+                    ${weekTimes}
                 </div>
             </div>
             <div class="detail-item" style="margin: 0;">
                 <span class="detail-label" style="font-size: 0.75rem; color: #888;">📅 주말 운영시간</span>
-                <div style="font-size: 0.95rem; ${isWeekend ? 'color:#333; font-weight:bold;' : 'color:#999;'}">
-                    ${[shop["주말 타임 1"], shop["주말 타임 2"], shop["주말 타임 3"]].filter(t => t).join(' / ') || '운영 안 함'}
+                <div style="font-size: 0.95rem; ${(isWeekend || season === 'HOLIDAY') ? 'color:#333; font-weight:bold;' : 'color:#999;'}">
+                    ${weekendTimes}
                 </div>
             </div>
             <div class="detail-item" style="margin: 0;">
                 <span class="detail-label" style="font-size: 0.75rem; color: #888;">🚫 정기 휴무</span>
-                <div style="font-size: 0.95rem; color: #e74c3c;">${shop["휴무 요일"] || '연중무휴'}</div>
+                <div style="font-size: 0.95rem; color: #e74c3c;">${closedLabel}</div>
             </div>
+            ${season === "HOLIDAY" ? `<div style="font-size: 0.8rem; color: #e74c3c;">※ 공휴일 영업 여부: ${shop["공휴일 영업"] === "Y" ? "영업함" : "쉬어감"}</div>` : ''}
         </div>
 
         <button onclick="closeModal()" style="width:100%; padding:15px; margin-top:20px; border-radius:12px; border:none; background:#333; color:white; font-weight:bold; cursor:pointer;">닫기</button>
@@ -249,7 +313,7 @@ function pickRandomShop() {
     // 1. 현재 영업 중이거나 준비 중인 식당만 필터링
     const availableShops = restaurants.filter(shop => {
         const status = getStatus(shop);
-        return status.canEat || status.label === "준비 중";
+        return status.canEat;
     });
 
     if (availableShops.length === 0) {
@@ -327,11 +391,35 @@ window.onclick = (event) => {
     if (event.target === randomModal) closeRandomModal();
 }
 
+// [5] 메인 리스트에서 오늘 운영 시간을 표시하는 함수 (수정본)
 function getCurrentDayTimes(shop) {
+    const season = getSeason(); // 현재 학기/방학/공휴일 판단
     const day = new Date().getDay();
     const isWeekend = (day === 0 || day === 6);
-    const prefix = isWeekend ? "주말 타임 " : "평일 타임 ";
-    const times = [shop[prefix + "1"], shop[prefix + "2"], shop[prefix + "3"]].filter(t => t && t !== "");
+
+    // 1. 시즌 및 요일에 따른 데이터 키(Key) 결정
+    let prefix = "";
+    if (season === "VACATION") {
+        prefix = isWeekend ? "방학 주말 타임 " : "방학 평일 타임 ";
+        // 방학 데이터가 없으면 학기 데이터로 대체 (Fallback)
+        if (!shop[prefix + "1"] || shop[prefix + "1"] === "") {
+            prefix = isWeekend ? "학기 주말 타임 " : "학기 평일 타임 ";
+        }
+    } else {
+        // 공휴일인 경우 보통 주말 시간을 따르므로 isWeekend와 동일하게 처리하거나
+        // 학기 중이라면 학기 시간을 따름
+        prefix = isWeekend ? "학기 주말 타임 " : "학기 평일 타임 ";
+    }
+
+    // 2. 해당 키의 1, 2, 3번 타임을 합쳐서 출력
+    const times = [shop[prefix + "1"], shop[prefix + "2"], shop[prefix + "3"]]
+                  .filter(t => t && t.trim() !== "" && t !== "운영 안 함");
+
+    // 3. 공휴일 휴무 체크 추가
+    if (season === "HOLIDAY" && shop["공휴일 영업"] === "N") {
+        return "공휴일 휴무";
+    }
+
     return times.length > 0 ? times.join(', ') : "운영 안 함";
 }
 
