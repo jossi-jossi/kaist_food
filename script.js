@@ -517,15 +517,18 @@ function updateLocationAndRender() {
 }
 
 window.onload = () => {
-    // 1. 일단 리스트를 한 번 그립니다 (좌표 없이 우선 노출)
+    const loader = document.getElementById('location-loader');
+    
+    // 1. 일단 리스트를 한 번 그립니다 (기존 순서)
     renderList();
 
-    // 2. 위치 정보 요청
     if (navigator.geolocation) {
-        // 위치 정보를 가져오는 옵션 설정 (정확도 높임)
+        // 2. 위치 계산 메시지 표시
+        loader.style.display = 'block';
+
         const geoOptions = {
             enableHighAccuracy: true,
-            timeout: 5000,
+            timeout: 10000, // 최대 10초 대기
             maximumAge: 0
         };
 
@@ -533,17 +536,16 @@ window.onload = () => {
             const userLat = position.coords.latitude;
             const userLng = position.coords.longitude;
 
-            // 모든 식당 객체에 거리 계산값 주입
             restaurants.forEach(shop => {
                 shop.distance = getDistance(userLat, userLng, shop.lat, shop.lng);
             });
 
-            // ✨ 거리가 계산된 후 리스트를 '다시' 그립니다.
-            console.log("위치 정보 갱신 완료");
+            // 3. 계산 완료 후 리스트 재정렬 및 메시지 숨김
+            loader.style.display = 'none';
             renderList(); 
         }, (error) => {
-            console.warn("위치 권한 거부 또는 오류:", error.message);
-            // 위치 정보를 못 가져와도 이미 첫 번째 renderList()가 실행된 상태입니다.
+            console.warn("위치 정보를 가져올 수 없습니다:", error.message);
+            loader.style.display = 'none'; // 실패 시에도 메시지는 숨김
         }, geoOptions);
     }
 };

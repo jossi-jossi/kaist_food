@@ -220,6 +220,16 @@ h2 {
     box-shadow: 0 2px 4px rgba(0,0,0,0.05);
 }
 
+#location-loader {
+    animation: blink 1.5s infinite;
+}
+
+@keyframes blink {
+    0% { opacity: 1; }
+    50% { opacity: 0.4; }
+    100% { opacity: 1; }
+}
+
 #modal-body h2 { margin-bottom: 15px; color: #ff6b6b; }
 .detail-item { margin-bottom: 12px; font-size: 0.95rem; }
 .detail-label { font-weight: bold; color: #333; display: block; margin-bottom: 4px; }
