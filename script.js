@@ -519,34 +519,34 @@ function updateLocationAndRender() {
 window.onload = () => {
     const loader = document.getElementById('location-loader');
     
-    // 1. 일단 리스트를 한 번 그립니다 (기존 순서)
+    // 1. 일단 리스트 그리기
     renderList();
 
     if (navigator.geolocation) {
-        // 2. 위치 계산 메시지 표시
+        // 2. 메시지 즉시 노출 시도
         loader.style.display = 'block';
 
-        const geoOptions = {
-            enableHighAccuracy: true,
-            timeout: 10000, // 최대 10초 대기
-            maximumAge: 0
-        };
+        // 3. 브라우저가 UI를 그릴 시간을 준 뒤(0.1초) 위치 계산 시작
+        setTimeout(() => {
+            navigator.geolocation.getCurrentPosition((position) => {
+                const userLat = position.coords.latitude;
+                const userLng = position.coords.longitude;
 
-        navigator.geolocation.getCurrentPosition((position) => {
-            const userLat = position.coords.latitude;
-            const userLng = position.coords.longitude;
+                restaurants.forEach(shop => {
+                    shop.distance = getDistance(userLat, userLng, shop.lat, shop.lng);
+                });
 
-            restaurants.forEach(shop => {
-                shop.distance = getDistance(userLat, userLng, shop.lat, shop.lng);
+                loader.style.display = 'none'; // 성공 시 숨김
+                renderList(); 
+            }, (error) => {
+                console.warn("위치 정보 실패:", error.message);
+                loader.style.display = 'none'; // 실패 시 숨김
+            }, {
+                enableHighAccuracy: true,
+                timeout: 5000,
+                maximumAge: 0
             });
-
-            // 3. 계산 완료 후 리스트 재정렬 및 메시지 숨김
-            loader.style.display = 'none';
-            renderList(); 
-        }, (error) => {
-            console.warn("위치 정보를 가져올 수 없습니다:", error.message);
-            loader.style.display = 'none'; // 실패 시에도 메시지는 숨김
-        }, geoOptions);
+        }, 100); // 0.1초의 여유를 줌으로써 브라우저가 loader를 먼저 그리게 함
     }
 };
 

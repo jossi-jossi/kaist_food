@@ -221,7 +221,17 @@ h2 {
 }
 
 #location-loader {
-    animation: blink 1.5s infinite;
+    display: none; /* 기본은 숨김 */
+    text-align: center;
+    padding: 12px;
+    background-color: #fff4e6; /* 공지사항과 비슷한 톤으로 배경색 추가 */
+    color: #ff6b6b;
+    font-weight: bold;
+    font-size: 0.85rem;
+    position: relative; /* 레이아웃에서 자리 차지 */
+    z-index: 100;       /* 다른 요소보다 위로 */
+    border-radius: 8px;
+    margin: 5px 20px;
 }
 
 @keyframes blink {
