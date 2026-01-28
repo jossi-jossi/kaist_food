@@ -230,10 +230,18 @@ function openModal(shop) {
         <button onclick="closeModal()" style="width:100%; padding:15px; margin-top:20px; border-radius:12px; border:none; background:#333; color:white; font-weight:bold; cursor:pointer;">닫기</button>
     `;
     modal.style.display = 'flex';
+    history.pushState({ modal: 'detail' }, '');
 }
 
 function closeModal() {
-    document.getElementById('modal').style.display = 'none';
+    const modal = document.getElementById('modal');
+    if (modal.style.display === 'flex') {
+        modal.style.display = 'none';
+        // 만약 사용자가 '닫기' 버튼을 눌러서 닫는 경우, 쌓인 히스토리를 한 칸 뒤로 돌려줍니다.
+        if (history.state && history.state.modal === 'detail') {
+            history.back();
+        }
+    }
 }
 
 // [6] 랜덤 추천 기능 업그레이드
@@ -288,11 +296,26 @@ function pickRandomShop() {
     };
 
     document.getElementById('random-modal').style.display = 'flex';
+    history.pushState({ modal: 'random' }, ''); // 랜덤 모달용 히스토리
 }
 
 function closeRandomModal() {
-    document.getElementById('random-modal').style.display = 'none';
+    const rm = document.getElementById('random-modal');
+    if (rm.style.display === 'flex') {
+        rm.style.display = 'none';
+        if (history.state && history.state.modal === 'random') {
+            history.back();
+        }
+    }
 }
+
+// ✨ [핵심] 사용자가 폰의 '뒤로가기' 버튼을 눌렀을 때 실행되는 이벤트
+window.onpopstate = function(event) {
+    // 히스토리가 뒤로 가졌으므로, 떠 있는 모든 모달을 그냥 화면에서 숨깁니다.
+    document.getElementById('modal').style.display = 'none';
+    document.getElementById('random-modal').style.display = 'none';
+    document.getElementById('tag-modal').style.display = 'none';
+};
 
 // 윈도우 클릭 이벤트에 랜덤 모달 닫기 추가 (기존 window.onclick 수정)
 window.onclick = (event) => {
