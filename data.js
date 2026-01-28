@@ -20,7 +20,8 @@ const restaurants = [
     "lat": 36.3739,
     "lng": 127.3592,
     "태그": "학식",
-    "메뉴": ""
+    "메뉴": "",
+    "식단가기":"https://www.kaist.ac.kr/kr/html/campus/053001.html?dvs_cd=fclt"
   },
   {
     "식당명": "서측 학식",
@@ -42,7 +43,8 @@ const restaurants = [
     "lat": 36.367,
     "lng": 127.3605,
     "태그": "학식",
-    "메뉴": ""
+    "메뉴": "",
+    "식단가기":"https://www.kaist.ac.kr/kr/html/campus/053001.html?dvs_cd=west"
   },
   {
     "식당명": "교수 회관",
@@ -64,7 +66,8 @@ const restaurants = [
     "lat": 36.3746,
     "lng": 127.3648,
     "태그": "학식",
-    "메뉴": ""
+    "메뉴": "",
+    "식단가기":"https://www.kaist.ac.kr/kr/html/campus/053001.html?dvs_cd=emp"
   },
   {
     "식당명": "문지 학식",
@@ -86,7 +89,8 @@ const restaurants = [
     "lat": 36.392,
     "lng": 127.4001,
     "태그": "학식",
-    "메뉴": ""
+    "메뉴": "",
+    "식단가기":"https://www.kaist.ac.kr/kr/html/campus/053001.html?dvs_cd=icc"
   },
   {
     "식당명": "화암 학식",
@@ -108,7 +112,8 @@ const restaurants = [
     "lat": 36.4081,
     "lng": 127.3817,
     "태그": "학식",
-    "메뉴": ""
+    "메뉴": "",
+    "식단가기":"https://www.kaist.ac.kr/kr/html/campus/053001.html?dvs_cd=hawam"
   },
   {
     "식당명": "별리달리",

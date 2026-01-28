@@ -176,7 +176,6 @@ function applyMultiFilters() {
     renderList();
 }
 
-// [3] 식당 리스트 출력 함수 (위치 정렬 및 거리 표시 추가)
 function renderList() {
     const listContainer = document.getElementById('restaurant-list');
     listContainer.innerHTML = '';
@@ -189,48 +188,50 @@ function renderList() {
         return selectedTags.some(selected => shopTags.includes(selected));
     });
 
-    // renderList 함수 내 sort 부분 수정
+    // 2. 정렬 (영업 중 우선 -> 거리순)
     const sortedData = filteredData.sort((a, b) => {
         const statusA = getStatus(a).canEat;
         const statusB = getStatus(b).canEat;
-
-        if (statusA !== statusB) {
-            return statusB - statusA;
-        }
+        if (statusA !== statusB) return statusB - statusA;
         
-        // 거리 정보가 둘 다 있을 때만 거리순 정렬
-        if (a.distance !== undefined && b.distance !== undefined) {
-            return a.distance - b.distance;
-        }
-        
-        // 거리 정보가 한쪽만 있다면 정보가 있는 쪽을 위로
-        if (a.distance !== undefined) return -1;
-        if (b.distance !== undefined) return 1;
-
-        return 0; // 둘 다 없으면 순서 유지
+        const distA = a.distance !== undefined ? a.distance : 999;
+        const distB = b.distance !== undefined ? b.distance : 999;
+        return distA - distB;
     });
 
-    // 3. 데이터가 없을 때 처리
     if (sortedData.length === 0) {
         listContainer.innerHTML = '<p style="text-align:center; padding:50px; color:#999;">해당하는 식당이 없습니다. 😭</p>';
         return;
     }
 
-    // 4. 카드 생성
+    // 3. 카드 생성
     sortedData.forEach(shop => {
         const status = getStatus(shop);
         const card = document.createElement('div');
         card.className = 'card';
+        
+        // 카드 클릭 시 상세 모달 열기
         card.onclick = () => openModal(shop);
 
-        // 거리 표시용 텍스트 생성 (1km 미만은 m로 표시하거나 소수점 처리)
+        // 거리 텍스트 생성
         let distanceHtml = '';
         if (shop.distance !== undefined) {
             const dist = shop.distance;
-            const displayDist = dist < 1 
-                ? `${Math.round(dist * 1000)}m` 
-                : `${dist.toFixed(1)}km`;
+            const displayDist = dist < 1 ? `${Math.round(dist * 1000)}m` : `${dist.toFixed(1)}km`;
             distanceHtml = `<span style="font-size: 0.8rem; color: #ff6b6b; font-weight: bold; margin-left: 8px;">📍${displayDist}</span>`;
+        }
+
+        // ✨ 핵심: 메뉴 바로가기 링크 생성 (데이터가 있을 때만)
+        let menuLinkHtml = '';
+        if (shop["식단가기"]) {
+            menuLinkHtml = `
+                <div style="margin-top: 12px; border-top: 1px solid #eee; padding-top: 10px;">
+                    <a href="${shop["식단가기"]}" target="_blank" onclick="event.stopPropagation();" 
+                       style="display: inline-block; color: #ff6b6b; font-size: 0.8rem; text-decoration: none; font-weight: bold; background: #fff5f5; padding: 6px 12px; border-radius: 20px; border: 1px solid #ff6b6b;">
+                       🍴 오늘 메뉴 확인하기 ↗
+                    </a>
+                </div>
+            `;
         }
 
         card.innerHTML = `
@@ -238,28 +239,28 @@ function renderList() {
                 <span class="status-badge ${status.class}">${status.label}</span>
                 <span class="tags">${shop["태그"] || ''}</span>
             </div>
-            <h2>${shop["식당명"]}${distanceHtml}</h2>
+            <h2 style="margin: 10px 0 5px 0; font-size: 1.2rem;">${shop["식당명"]}${distanceHtml}</h2>
             <div class="time-info">
-                <p>⏰ 오늘 운영: ${getCurrentDayTimes(shop)}</p>
+                <p style="margin: 0; color: #666; font-size: 0.85rem;">⏰ 오늘: ${getCurrentDayTimes(shop)}</p>
             </div>
+            ${menuLinkHtml}
         `;
         listContainer.appendChild(card);
     });
 }
 
-// [4] 상세 정보 모달 (학기/방학/공휴일 완벽 대응 버전)
+// [4] 상세 정보 모달 (메뉴 링크 및 고정 메뉴 로직 수정 버전)
 function openModal(shop) {
     const modal = document.getElementById('modal');
     const body = document.getElementById('modal-body');
-    const status = getStatus(shop); // 시즌이 반영된 영업 상태
-    const season = getSeason();     // 현재 시즌 (SEMESTER, VACATION, HOLIDAY)
+    const status = getStatus(shop); 
+    const season = getSeason();     
     const isWeekend = ([0, 6].includes(new Date().getDay()));
     
-    // 📅 오늘 날짜를 YYYY-MM-DD 형식으로 생성 (식단표 링크용)
     const now = new Date();
     const todayStr = `${now.getFullYear()}-${String(now.getMonth() + 1).padStart(2, '0')}-${String(now.getDate()).padStart(2, '0')}`;
 
-    // 🔗 식단표 링크 생성
+    // 1. 식단표 링크 생성 (학식 등)
     let menuLinkHtml = '';
     if (shop["식단가기"]) {
         const fullLink = `${shop["식단가기"]}&stt_dt=${todayStr}`;
@@ -273,9 +274,9 @@ function openModal(shop) {
         `;
     }
 
-    // 🍴 메뉴 섹션 생성 (식단가기 링크가 없을 때만 메뉴를 보여줌)
+    // 2. 고정 메뉴 섹션 생성 (식단가기 유무와 상관없이 메뉴 데이터가 있으면 표시)
     let menuSectionHtml = '';
-    if (!shop["식단가기"] && shop["메뉴"]) {
+    if (shop["메뉴"]) {
         const sections = shop["메뉴"].split('[').filter(s => s.trim() !== "");
         const menuHtml = sections.map(section => {
             const parts = section.split(']');
@@ -293,21 +294,20 @@ function openModal(shop) {
 
         menuSectionHtml = `
             <div class="detail-item" style="margin-bottom: 25px;">
-                <span class="detail-label" style="font-weight: bold; color: #333; margin-bottom: 10px; display: block; border-left: 4px solid #ff6b6b; padding-left: 8px;">🍴 고정 메뉴 구성</span>
-                <div style="max-height: 250px; overflow-y: auto; padding: 10px; background: #fff; border: 1px solid #eee; border-radius: 12px;">
+                <span class="detail-label" style="font-weight: bold; color: #333; margin-bottom: 10px; display: block; border-left: 4px solid #ff6b6b; padding-left: 8px;">🍴 메뉴 구성</span>
+                <div style="max-height: 250px; overflow-y: auto; padding: 12px; background: #fff; border: 1px solid #eee; border-radius: 12px;">
                     ${menuHtml}
                 </div>
             </div>
         `;
     }
 
-    // 🕒 시즌에 맞는 시간 데이터 선택 (방학 데이터가 없으면 학기 데이터 사용)
+    // 3. 운영 시간 계산 로직 (기존 유지)
     const isVacationMode = (season === "VACATION");
     const weekPrefix = isVacationMode ? "방학 평일 타임 " : "학기 평일 타임 ";
     const weekendPrefix = isVacationMode ? "방학 주말 타임 " : "학기 주말 타임 ";
     const closedLabel = isVacationMode ? (shop["방학 휴무 요일"] || '연중무휴') : (shop["학기 휴무 요일"] || '연중무휴');
 
-    // 시간 리스트 생성 (비어있을 경우 fallback)
     const getTimes = (prefix, fallbackPrefix) => {
         let times = [shop[prefix + "1"], shop[prefix + "2"], shop[prefix + "3"]].filter(t => t && t.trim() !== "");
         if (times.length === 0 && isVacationMode) {
@@ -319,6 +319,7 @@ function openModal(shop) {
     const weekTimes = getTimes(weekPrefix, "학기 평일 타임 ");
     const weekendTimes = getTimes(weekendPrefix, "학기 주말 타임 ");
 
+    // 4. 최종 모달 HTML 렌더링
     body.innerHTML = `
         <div style="text-align: center; margin-bottom: 20px;">
             <div style="margin-bottom: 8px;">
@@ -353,7 +354,6 @@ function openModal(shop) {
                 <span class="detail-label" style="font-size: 0.75rem; color: #888;">🚫 정기 휴무</span>
                 <div style="font-size: 0.95rem; color: #e74c3c;">${closedLabel}</div>
             </div>
-            ${season === "HOLIDAY" ? `<div style="font-size: 0.8rem; color: #e74c3c;">※ 공휴일 영업 여부: ${shop["공휴일 영업"] === "Y" ? "영업함" : "쉬어감"}</div>` : ''}
         </div>
 
         <button onclick="closeModal()" style="width:100%; padding:15px; margin-top:20px; border-radius:12px; border:none; background:#333; color:white; font-weight:bold; cursor:pointer;">닫기</button>
