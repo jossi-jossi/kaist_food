@@ -207,6 +207,19 @@ h2 {
     animation: pulse 2s infinite; /* 버튼이 살짝씩 커졌다 작아졌다 함 */
 }
 
+.notice-bar {
+    background-color: #fff4e6; /* 연한 주황색 배경 */
+    color: #d9480f;            /* 진한 주황색 글자 */
+    padding: 10px;
+    margin: 10px 20px;         /* 좌우 여백 */
+    border-radius: 8px;
+    font-size: 0.85rem;
+    font-weight: bold;
+    text-align: center;
+    border: 1px solid #ffe8cc;
+    box-shadow: 0 2px 4px rgba(0,0,0,0.05);
+}
+
 #modal-body h2 { margin-bottom: 15px; color: #ff6b6b; }
 .detail-item { margin-bottom: 12px; font-size: 0.95rem; }
 .detail-label { font-weight: bold; color: #333; display: block; margin-bottom: 4px; }
