@@ -189,19 +189,25 @@ function renderList() {
         return selectedTags.some(selected => shopTags.includes(selected));
     });
 
-    // 2. 정렬 (1순위: 영업 상태, 2순위: 거리순)
+    // renderList 함수 내 sort 부분 수정
     const sortedData = filteredData.sort((a, b) => {
         const statusA = getStatus(a).canEat;
         const statusB = getStatus(b).canEat;
 
         if (statusA !== statusB) {
-            return statusB - statusA; // 영업 중(true=1)이 위로
+            return statusB - statusA;
         }
         
-        // 거리 정보가 있는 경우 거리순 정렬 (좌표 없는 데이터는 뒤로)
-        const distA = a.distance !== undefined ? a.distance : 999;
-        const distB = b.distance !== undefined ? b.distance : 999;
-        return distA - distB;
+        // 거리 정보가 둘 다 있을 때만 거리순 정렬
+        if (a.distance !== undefined && b.distance !== undefined) {
+            return a.distance - b.distance;
+        }
+        
+        // 거리 정보가 한쪽만 있다면 정보가 있는 쪽을 위로
+        if (a.distance !== undefined) return -1;
+        if (b.distance !== undefined) return 1;
+
+        return 0; // 둘 다 없으면 순서 유지
     });
 
     // 3. 데이터가 없을 때 처리
@@ -510,9 +516,19 @@ function updateLocationAndRender() {
     }
 }
 
-// 페이지 로드 시 위치 권한을 묻고 정렬을 시작합니다.
 window.onload = () => {
+    // 1. 일단 리스트를 한 번 그립니다 (좌표 없이 우선 노출)
+    renderList();
+
+    // 2. 위치 정보 요청
     if (navigator.geolocation) {
+        // 위치 정보를 가져오는 옵션 설정 (정확도 높임)
+        const geoOptions = {
+            enableHighAccuracy: true,
+            timeout: 5000,
+            maximumAge: 0
+        };
+
         navigator.geolocation.getCurrentPosition((position) => {
             const userLat = position.coords.latitude;
             const userLng = position.coords.longitude;
@@ -521,12 +537,14 @@ window.onload = () => {
             restaurants.forEach(shop => {
                 shop.distance = getDistance(userLat, userLng, shop.lat, shop.lng);
             });
-            renderList(); // 거리 반영하여 다시 그림
-        }, () => {
-            renderList(); // 권한 거부 시 기본 순서로 그림
-        });
-    } else {
-        renderList();
+
+            // ✨ 거리가 계산된 후 리스트를 '다시' 그립니다.
+            console.log("위치 정보 갱신 완료");
+            renderList(); 
+        }, (error) => {
+            console.warn("위치 권한 거부 또는 오류:", error.message);
+            // 위치 정보를 못 가져와도 이미 첫 번째 renderList()가 실행된 상태입니다.
+        }, geoOptions);
     }
 };
 
