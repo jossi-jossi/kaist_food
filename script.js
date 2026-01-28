@@ -78,104 +78,163 @@ function getStatus(shop) {
 // [2] 태그 다중 선택 및 팝업 제어
 let selectedTags = ["전체"]; 
 
+// 전역 변수로 태그 목록 관리
+let allUniqueTags = [];
+
 function openTagModal() {
-    renderTagList(); 
-    document.getElementById('tag-modal').style.display = 'flex';
-}
-
-function closeTagModal() {
-    document.getElementById('tag-modal').style.display = 'none';
-}
-
-function renderTagList() {
-    const container = document.getElementById('tag-list-container');
-    if (!container) return;
-
-    let tags = [];
+    const searchInput = document.getElementById('tag-search-input');
+    if (searchInput) searchInput.value = '';
+    
+    let rawTags = [];
     restaurants.forEach(shop => {
         if (shop["태그"]) {
-            const splitTags = shop["태그"].split(',').map(t => t.trim());
-            tags.push(...splitTags);
+            rawTags.push(...shop["태그"].split(',').map(t => t.trim()));
         }
     });
 
-    const uniqueTags = ["전체", ...new Set(tags)].filter(tag => tag !== "").sort((a, b) => {
-        if (a === "전체") return -1;
-        if (b === "전체") return 1;
-        return a.localeCompare(b, 'ko'); 
-    });
+    // ✨ '전체'를 제외하고 고유 태그만 추출하여 가나다순 정렬
+    allUniqueTags = [...new Set(rawTags)].filter(tag => tag !== "" && tag !== "전체").sort();
 
-    container.innerHTML = uniqueTags.map(tag => {
-        const isSelected = selectedTags.includes(tag);
-        return `
-            <div class="tag-item-btn ${isSelected ? 'selected' : ''}" 
-                 onclick="toggleTag('${tag}')">
-                ${tag === "전체" ? tag : '#' + tag}
-            </div>
-        `;
-    }).join('');
+    renderTagList(allUniqueTags);
+    document.getElementById('tag-modal').style.display = 'flex';
+    history.pushState({ modal: 'tag' }, '');
+}
+
+// [4] 태그 닫기 함수 (기존 window.onpopstate와 연동되게 확인)
+function closeTagModal() {
+    const tm = document.getElementById('tag-modal');
+    if (tm.style.display === 'flex') {
+        tm.style.display = 'none';
+        if (history.state && history.state.modal === 'tag') {
+            history.back();
+        }
+    }
+}
+
+// [2] 태그 리스트 화면에 그리기
+function renderTagList(tagsToShow) {
+    const container = document.getElementById('tag-list-container');
+    
+    if (tagsToShow.length === 0) {
+        container.innerHTML = `<p style="grid-column: 1/-1; text-align: center; color: #bbb; padding: 20px;">검색 결과가 없습니다. 😅</p>`;
+        return;
+    }
+
+    container.innerHTML = tagsToShow.map(tag => `
+        <div class="tag-item-btn ${selectedTags.includes(tag) ? 'selected' : ''}" 
+             onclick="toggleTag('${tag}')" 
+             style="cursor: pointer;">
+            ${tag === "전체" ? tag : '#' + tag}
+        </div>
+    `).join('');
+}
+
+// [3] 실시간 태그 검색 로직 (검색어에 따른 필터링된 목록 반환)
+function filterTagsInModal() {
+    const keyword = document.getElementById('tag-search-input').value.toLowerCase().trim();
+    
+    const filteredTags = allUniqueTags.filter(tag => 
+        tag.toLowerCase().includes(keyword)
+    );
+    
+    renderTagList(filteredTags);
 }
 
 function toggleTag(tag) {
-    if (tag === "전체") {
-        selectedTags = ["전체"];
+    // 선택된 태그 목록에 있으면 제거, 없으면 추가
+    if (selectedTags.includes(tag)) {
+        selectedTags = selectedTags.filter(t => t !== tag);
     } else {
-        selectedTags = selectedTags.filter(t => t !== "전체");
-        if (selectedTags.includes(tag)) {
-            selectedTags = selectedTags.filter(t => t !== tag);
-            if (selectedTags.length === 0) selectedTags = ["전체"];
-        } else {
-            selectedTags.push(tag);
+        // 만약 기존에 '전체'만 있었다면 비워주고 태그 추가
+        if (selectedTags.includes("전체")) {
+            selectedTags = [];
         }
+        selectedTags.push(tag);
     }
-    renderTagList(); 
+
+    // ✨ 아무것도 선택되지 않았다면 다시 '전체' 상태로 복구
+    if (selectedTags.length === 0) {
+        selectedTags = ["전체"];
+    }
+
+    // 현재 검색어 상태 유지하며 리스트 갱신
+    const keyword = document.getElementById('tag-search-input').value.toLowerCase().trim();
+    const filteredTags = allUniqueTags.filter(t => t.toLowerCase().includes(keyword));
+    
+    renderTagList(filteredTags); 
 }
 
 function applyMultiFilters() {
     const label = document.getElementById('current-tag-label');
-    if (selectedTags.includes("전체")) {
+    if (selectedTags.includes("전체") || selectedTags.length === 0) {
         label.innerText = "전체";
+        selectedTags = ["전체"];
     } else {
-        label.innerText = selectedTags.length > 1 
-            ? `${selectedTags[0]} 외 ${selectedTags.length - 1}개` 
-            : selectedTags[0];
+        label.innerText = selectedTags.length > 1 ? `${selectedTags[0]} 외 ${selectedTags.length - 1}` : selectedTags[0];
     }
     closeTagModal();
     renderList();
 }
 
-// [3] 식당 리스트 출력 함수
+// [3] 식당 리스트 출력 함수 (위치 정렬 및 거리 표시 추가)
 function renderList() {
     const listContainer = document.getElementById('restaurant-list');
     listContainer.innerHTML = '';
 
+    // 1. 태그 필터링
     const filteredData = restaurants.filter(shop => {
         if (selectedTags.includes("전체")) return true;
+        if (!shop["태그"]) return false;
         const shopTags = shop["태그"].split(',').map(t => t.trim());
         return selectedTags.some(selected => shopTags.includes(selected));
     });
 
-    const sortedData = filteredData.sort((a, b) => getStatus(b).canEat - getStatus(a).canEat);
+    // 2. 정렬 (1순위: 영업 상태, 2순위: 거리순)
+    const sortedData = filteredData.sort((a, b) => {
+        const statusA = getStatus(a).canEat;
+        const statusB = getStatus(b).canEat;
 
+        if (statusA !== statusB) {
+            return statusB - statusA; // 영업 중(true=1)이 위로
+        }
+        
+        // 거리 정보가 있는 경우 거리순 정렬 (좌표 없는 데이터는 뒤로)
+        const distA = a.distance !== undefined ? a.distance : 999;
+        const distB = b.distance !== undefined ? b.distance : 999;
+        return distA - distB;
+    });
+
+    // 3. 데이터가 없을 때 처리
     if (sortedData.length === 0) {
         listContainer.innerHTML = '<p style="text-align:center; padding:50px; color:#999;">해당하는 식당이 없습니다. 😭</p>';
         return;
     }
 
+    // 4. 카드 생성
     sortedData.forEach(shop => {
         const status = getStatus(shop);
         const card = document.createElement('div');
         card.className = 'card';
         card.onclick = () => openModal(shop);
 
+        // 거리 표시용 텍스트 생성 (1km 미만은 m로 표시하거나 소수점 처리)
+        let distanceHtml = '';
+        if (shop.distance !== undefined) {
+            const dist = shop.distance;
+            const displayDist = dist < 1 
+                ? `${Math.round(dist * 1000)}m` 
+                : `${dist.toFixed(1)}km`;
+            distanceHtml = `<span style="font-size: 0.8rem; color: #ff6b6b; font-weight: bold; margin-left: 8px;">📍${displayDist}</span>`;
+        }
+
         card.innerHTML = `
             <div class="card-header">
                 <span class="status-badge ${status.class}">${status.label}</span>
                 <span class="tags">${shop["태그"] || ''}</span>
             </div>
-            <h2>${shop["식당명"]}</h2>
+            <h2>${shop["식당명"]}${distanceHtml}</h2>
             <div class="time-info">
-                <p>📍 오늘 운영: ${getCurrentDayTimes(shop)}</p>
+                <p>⏰ 오늘 운영: ${getCurrentDayTimes(shop)}</p>
             </div>
         `;
         listContainer.appendChild(card);
@@ -308,65 +367,57 @@ function closeModal() {
     }
 }
 
-// [6] 랜덤 추천 기능 업그레이드
+// [6] 랜덤 추천 시작
 function pickRandomShop() {
-    // 1. 현재 영업 중이거나 준비 중인 식당만 필터링
-    const availableShops = restaurants.filter(shop => {
-        const status = getStatus(shop);
-        return status.canEat;
-    });
+    refreshRandom(); // 식당을 뽑고 화면에 표시
+    
+    document.getElementById('random-modal').style.display = 'flex';
+    history.pushState({ modal: 'random' }, ''); // 히스토리 추가
+}
 
-    if (availableShops.length === 0) {
-        alert("현재 운영 중인 식당이 없네요. 😭");
+// ✨ [새로 추가] 식당을 실제로 뽑아서 화면 내용만 바꿔주는 함수
+function refreshRandom() {
+    const available = restaurants.filter(s => getStatus(s).canEat);
+    
+    if (available.length === 0) {
+        alert("현재 영업 중인 식당이 없네요. 😭");
+        closeRandomModal();
         return;
     }
 
-    // 2. 랜덤 식당 추출
-    const randomIndex = Math.floor(Math.random() * availableShops.length);
-    const selectedShop = availableShops[randomIndex];
-
-    // 3. 메뉴 추출 로직
-    let suggestionText = "";
-    if (selectedShop["식단가기"]) {
-        // 학식의 경우 구체적인 메뉴를 알 수 없으므로 기대감을 주는 문구 출력
-        suggestionText = "🍱 오늘의 맛있는 학식을 확인해보세요!";
-    } else if (selectedShop["메뉴"]) {
-        // [카테고리] 메뉴1, 메뉴2 형태에서 메뉴 이름들만 추출
-        const allItems = selectedShop["메뉴"]
-            .replace(/\[.*?\]/g, "") // [카테고리] 제거
-            .split(",")              // 쉼표로 분리
-            .map(i => i.trim())      // 공백 제거
-            .filter(i => i !== "");  // 빈 값 제거
-
-        if (allItems.length > 0) {
-            // 메뉴 중 무작위로 1~2개 선택
-            const shuffle = allItems.sort(() => 0.5 - Math.random());
-            const picked = shuffle.slice(0, Math.min(2, shuffle.length));
-            suggestionText = `✨ ${picked.join(', ')} 어때요?`;
-        } else {
-            suggestionText = "맛있는 메뉴가 가득해요! 😋";
+    const selected = available[Math.floor(Math.random() * available.length)];
+    let suggestion = "맛있는 식사를 즐겨보세요! 😋";
+    
+    if (selected["식단가기"]) {
+        suggestion = "🍱 오늘의 맛있는 학식을 확인해보세요!";
+    } else if (selected["메뉴"]) {
+        const items = selected["메뉴"].replace(/\[.*?\]/g, "").split(",").map(i => i.trim()).filter(i => i);
+        if (items.length > 0) {
+            suggestion = `✨ ${items.sort(() => 0.5 - Math.random()).slice(0, 2).join(', ')} 어때요?`;
         }
-    } else {
-        suggestionText = "어떤 메뉴가 있을지 확인해볼까요? 🧐";
     }
 
-    // 4. 결과 출력
-    document.getElementById('random-result-name').innerText = selectedShop["식당명"];
-    document.getElementById('random-menu-text').innerText = suggestionText;
+    // 화면 내용 교체
+    document.getElementById('random-result-name').innerText = selected["식당명"];
+    document.getElementById('random-menu-text').innerText = suggestion;
     
+    // 상세 정보 보기 버튼 이벤트 연결
     document.getElementById('random-go-btn').onclick = () => {
-        closeRandomModal();
-        openModal(selectedShop);
+        const rm = document.getElementById('random-modal');
+        rm.style.display = 'none';
+        if (history.state && history.state.modal === 'random') history.back();
+        
+        setTimeout(() => openModal(selected), 100);
     };
-
-    document.getElementById('random-modal').style.display = 'flex';
-    history.pushState({ modal: 'random' }, ''); // 랜덤 모달용 히스토리
 }
 
 function closeRandomModal() {
     const rm = document.getElementById('random-modal');
-    if (rm.style.display === 'flex') {
+    if (rm && rm.style.display === 'flex') {
         rm.style.display = 'none';
+        
+        // ✨ 핵심: 자바스크립트 함수(클릭)로 닫을 때는 쌓인 히스토리를 하나 지워줍니다.
+        // 하지만 이미 뒤로가기로 인해 닫힌 상태라면 back()을 실행하지 않아야 합니다.
         if (history.state && history.state.modal === 'random') {
             history.back();
         }
@@ -422,6 +473,62 @@ function getCurrentDayTimes(shop) {
 
     return times.length > 0 ? times.join(', ') : "운영 안 함";
 }
+
+// 두 지점 간의 직선 거리 계산 (단위: km)
+function getDistance(lat1, lon1, lat2, lon2) {
+    if (!lat1 || !lon1 || !lat2 || !lon2) return 999; // 좌표 정보가 없으면 아주 멀리 보냄
+    const R = 6371; // 지구 반지름
+    const dLat = (lat2 - lat1) * Math.PI / 180;
+    const dLon = (lon2 - lon1) * Math.PI / 180;
+    const a = Math.sin(dLat / 2) * Math.sin(dLat / 2) +
+              Math.cos(lat1 * Math.PI / 180) * Math.cos(lat2 * Math.PI / 180) *
+              Math.sin(dLon / 2) * Math.sin(dLon / 2);
+    const c = 2 * Math.atan2(Math.sqrt(a), Math.sqrt(1 - a));
+    return R * c;
+}
+
+function updateLocationAndRender() {
+    if (navigator.geolocation) {
+        // 위치 정보 요청 (모바일에서 권한 팝업이 뜹니다)
+        navigator.geolocation.getCurrentPosition((position) => {
+            const userLat = position.coords.latitude;
+            const userLng = position.coords.longitude;
+
+            // 모든 식당 객체에 현재 내 위치와의 거리(distance) 속성 추가
+            restaurants.forEach(shop => {
+                shop.distance = getDistance(userLat, userLng, shop.lat, shop.lng);
+            });
+
+            // 정렬 후 리스트 다시 그리기
+            renderList();
+        }, (error) => {
+            console.warn("위치 정보를 가져올 수 없습니다. 기본 순서로 표시합니다.");
+            renderList(); // 위치 실패 시에도 리스트는 보여줌
+        });
+    } else {
+        renderList(); // GPS 미지원 브라우저 대응
+    }
+}
+
+// 페이지 로드 시 위치 권한을 묻고 정렬을 시작합니다.
+window.onload = () => {
+    if (navigator.geolocation) {
+        navigator.geolocation.getCurrentPosition((position) => {
+            const userLat = position.coords.latitude;
+            const userLng = position.coords.longitude;
+
+            // 모든 식당 객체에 거리 계산값 주입
+            restaurants.forEach(shop => {
+                shop.distance = getDistance(userLat, userLng, shop.lat, shop.lng);
+            });
+            renderList(); // 거리 반영하여 다시 그림
+        }, () => {
+            renderList(); // 권한 거부 시 기본 순서로 그림
+        });
+    } else {
+        renderList();
+    }
+};
 
 // [5] 초기 실행
 renderList();
